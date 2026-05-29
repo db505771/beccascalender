@@ -24,14 +24,14 @@
 
     .calendar {
       display: grid;
-      grid-template-columns: repeat(7, 1fr); /* Fixed: Standard calendar layout has 7 days a week */
+      grid-template-columns: repeat(7, 1fr); /* Standard 7-day week layout */
       gap: 10px;
       width: 100%;
       max-width: 500px;
     }
 
     .day {
-      aspect-ratio: 1; /* Keeps them perfectly square on all mobile viewports */
+      aspect-ratio: 1; /* Keeps calendar items perfectly square */
       background-color: #1a2b3d;
       display: flex;
       flex-direction: column;
@@ -52,9 +52,7 @@
     }
 
     .day span {
-      font-size: 10px;
-      opacity: 0.8;
-      margin-top: 2px;
+      font-size: 20px;
     }
   </style>
 </head>
@@ -63,20 +61,28 @@
   <div class="calendar" id="calendar"></div>
 
   <script>
-    // Keeping both crucial variables as specified
+    // Keeping both crucial pipelines completely intact
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTRqMqbCRZdfrIDgdkarWSH7iy3qhwhSCsfjAOcKVYO60m3smkMLMIT8hQWBdmrboORQJGsC3FwmVRq/pub?output=csv";
     const gameApi = "https://script.google.com/macros/s/AKfycbzcX9WsRdeEdz1ziWq4CbuUwa_WwxxUGPI1YtMTvYIHZGZ4cBus_p7qXdIIiFW_0hu_/exec";
 
+    let csvRows = [];
     let gameData = [];
     let currentDate = new Date();
-    let isInitialLoading = true;
+    let isLoading = true;
 
-    // ⚡ Fetch data once on load to eliminate layout lag
+    // ⚡ Fetch both datasets ONCE at startup to completely eliminate swipe lag
     async function initData() {
       try {
-        const res = await fetch(gameApi);
-        gameData = await res.json();
-        isInitialLoading = false;
+        const [csvRes, apiRes] = await Promise.all([
+          fetch(csvUrl).then(res => res.text()),
+          fetch(gameApi).then(res => res.json())
+        ]);
+
+        // Parse CSV Rows safely
+        csvRows = csvRes.trim().split("\n").slice(1).map(row => row.split(","));
+        gameData = apiRes;
+        
+        isLoading = false;
         buildCalendar();
       } catch (e) {
         document.getElementById("calendar-title").textContent = "Error Loading Data";
@@ -95,7 +101,7 @@
     }
 
     function buildCalendar() {
-      if (isInitialLoading) return;
+      if (isLoading) return;
 
       const calendar = document.getElementById("calendar");
       const title = document.getElementById("calendar-title");
@@ -107,43 +113,44 @@
       const monthName = currentDate.toLocaleString("default", { month: "long" });
       title.textContent = `${monthName} ${year} Play Calendar`;
 
-      // Find which dates have gameplay tracked inside our pre-fetched API array
-      const playedDatesMap = {}; 
-      gameData.forEach(g => {
-        const d = new Date(g.date);
-        if (d.getFullYear() === year && d.getMonth() === month && g.minutes > 0) {
-          const dateNum = d.getDate();
-          playedDatesMap[dateNum] = (playedDatesMap[dateNum] || 0) + g.minutes;
+      // ⚡ Extract played days purely from the Google Sheet CSV cache
+      const playedDates = new Set();
+      for (const row of csvRows) {
+        const rawDate = row[0];
+        // Based on your original row layout: column 4 (index 4) handles minutes played
+        const minutesPlayed = parseInt(row[4]) || 0; 
+        const date = new Date(rawDate);
+        
+        if (date.getFullYear() === year && date.getMonth() === month && minutesPlayed > 0) {
+          playedDates.add(date.getDate());
         }
-      });
+      }
 
       const days = getMonthDays(year, month);
-      let htmlContent = "";
+      let htmlString = "";
 
-      // ⚡ DOM Batch Building for instant swipes
-      days.forEach((day, index) => {
+      // ⚡ DOM Batch Processing for smooth rendering
+      days.forEach(day => {
         const dateNum = day.getDate();
-        const hasPlayed = playedDatesMap[dateNum] > 0;
         let classes = "day";
-        
-        if (hasPlayed) classes += " played";
-        if (isCurrentMonth && dateNum === today.getDate()) classes += " today";
 
-        const totalMins = playedDatesMap[dateNum] || 0;
-        const subtitle = totalMins > 0 ? `<span>${Math.floor(totalMins / 60)}h</span>` : "";
+        if (playedDates.has(dateNum)) {
+          classes += " played";
+        }
+        if (isCurrentMonth && dateNum === today.getDate()) {
+          classes += " today";
+        }
 
-        htmlContent += `
+        htmlString += `
           <div class="${classes}" onclick="showGamesByDay(${dateNum})">
-            ${dateNum}
-            ${subtitle}
+            ${dateNum}<span></span>
           </div>
         `;
       });
 
-      calendar.innerHTML = htmlContent;
+      calendar.innerHTML = htmlString;
     }
 
-    // Helper to process context days safely from click bindings
     function showGamesByDay(dateNum) {
       const selectedDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), dateNum);
       showGames(selectedDay);
@@ -168,6 +175,7 @@
       }
     }
 
+    // ⚡ Populates individual games via the clean API dataset
     function showGames(day) {
       const existing = document.getElementById("popup");
       if (existing) existing.remove();
@@ -192,7 +200,6 @@
       box.style.overflowY = "auto";
       box.style.border = "1px solid #2d4561";
 
-      // Prevent popup close click when tapping inner box elements
       box.onclick = (e) => e.stopPropagation();
 
       const title = document.createElement("h2");
@@ -200,6 +207,7 @@
       title.innerText = day.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       box.appendChild(title);
 
+      // Filters game details from our Web App JSON API data stream
       const filtered = gameData.filter(g => {
         const d = new Date(g.date);
         return (
@@ -213,7 +221,7 @@
       if (filtered.length === 0) {
         const none = document.createElement("div");
         none.style.color = "#aaa";
-        none.innerText = "No play history recorded for this day.";
+        none.innerText = "No game details recorded for this day.";
         box.appendChild(none);
       } else {
         filtered.forEach(g => {
@@ -231,7 +239,7 @@
             <div>
               <div style="font-weight:bold; font-size:15px; margin-bottom:2px;">${g.name}</div>
               <div style="color:#00aced; font-size:13px; font-weight:600;">
-                ${Math.floor(g.minutes / 60)}h ${g.minutes % 60}m logged
+                ${Math.floor(g.minutes / 60)}h ${g.minutes % 60}m played
               </div>
             </div>
           `;
@@ -244,7 +252,7 @@
       document.body.appendChild(popup);
     }
 
-    // Initialize application data stream
+    // Fire data loading pipeline on window load
     initData();
   </script>
 </body>
