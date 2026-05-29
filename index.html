@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Playtime Calendar</title>
   <style>
     body {
@@ -24,15 +24,14 @@
 
     .calendar {
       display: grid;
-      grid-template-columns: repeat(7, 1fr); /* Fixed to standard 7 days a week layout */
+      grid-template-columns: repeat(7, 1fr); /* Fixed: Standard calendar layout has 7 days a week */
       gap: 10px;
-      max-width: 500px;
       width: 100%;
-      transition: transform 0.3s ease;
+      max-width: 500px;
     }
 
     .day {
-      aspect-ratio: 1; /* Keeps cells square across multiple devices */
+      aspect-ratio: 1; /* Keeps them perfectly square on all mobile viewports */
       background-color: #1a2b3d;
       display: flex;
       flex-direction: column;
@@ -53,29 +52,36 @@
     }
 
     .day span {
-      font-size: 20px;
+      font-size: 10px;
+      opacity: 0.8;
+      margin-top: 2px;
     }
   </style>
 </head>
 <body>
-  <h1 id="calendar-title">Loading...</h1>
+  <h1 id="calendar-title">Loading Layout...</h1>
   <div class="calendar" id="calendar"></div>
 
   <script>
+    // Keeping both crucial variables as specified
+    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTRqMqbCRZdfrIDgdkarWSH7iy3qhwhSCsfjAOcKVYO60m3smkMLMIT8hQWBdmrboORQJGsC3FwmVRq/pub?output=csv";
     const gameApi = "https://script.google.com/macros/s/AKfycbzcX9WsRdeEdz1ziWq4CbuUwa_WwxxUGPI1YtMTvYIHZGZ4cBus_p7qXdIIiFW_0hu_/exec";
 
     let gameData = [];
     let currentDate = new Date();
+    let isInitialLoading = true;
 
-    // ⚡ 1. Fetch data EXACTLY ONCE on initial boot
-    async function init() {
+    // ⚡ Fetch data once on load to eliminate layout lag
+    async function initData() {
       try {
         const res = await fetch(gameApi);
         gameData = await res.json();
-      } catch(e) {
-        console.error("Failed to fetch game data", e);
+        isInitialLoading = false;
+        buildCalendar();
+      } catch (e) {
+        document.getElementById("calendar-title").textContent = "Error Loading Data";
+        console.error(e);
       }
-      buildCalendar();
     }
 
     function getMonthDays(year, month) {
@@ -88,11 +94,11 @@
       return days;
     }
 
-    // ⚡ 2. Instant purely visual rendering engine
     function buildCalendar() {
+      if (isInitialLoading) return;
+
       const calendar = document.getElementById("calendar");
       const title = document.getElementById("calendar-title");
-      calendar.innerHTML = "";
 
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
@@ -101,81 +107,76 @@
       const monthName = currentDate.toLocaleString("default", { month: "long" });
       title.textContent = `${monthName} ${year} Play Calendar`;
 
-      // Build quick set using pre-fetched memory data
-      const playedDates = new Set();
+      // Find which dates have gameplay tracked inside our pre-fetched API array
+      const playedDatesMap = {}; 
       gameData.forEach(g => {
-        const date = new Date(g.date);
-        if (date.getFullYear() === year && date.getMonth() === month && g.minutes > 0) {
-          playedDates.add(date.getDate());
+        const d = new Date(g.date);
+        if (d.getFullYear() === year && d.getMonth() === month && g.minutes > 0) {
+          const dateNum = d.getDate();
+          playedDatesMap[dateNum] = (playedDatesMap[dateNum] || 0) + g.minutes;
         }
       });
 
       const days = getMonthDays(year, month);
+      let htmlContent = "";
 
-      // Create fragment for high speed performance batch injection
-      const fragment = document.createDocumentFragment();
+      // ⚡ DOM Batch Building for instant swipes
+      days.forEach((day, index) => {
+        const dateNum = day.getDate();
+        const hasPlayed = playedDatesMap[dateNum] > 0;
+        let classes = "day";
+        
+        if (hasPlayed) classes += " played";
+        if (isCurrentMonth && dateNum === today.getDate()) classes += " today";
 
-      days.forEach(day => {
-        const div = document.createElement("div");
-        div.classList.add("day");
-        div.innerHTML = `${day.getDate()}<span></span>`;
+        const totalMins = playedDatesMap[dateNum] || 0;
+        const subtitle = totalMins > 0 ? `<span>${Math.floor(totalMins / 60)}h</span>` : "";
 
-        if (playedDates.has(day.getDate())) {
-          div.classList.add("played");
-        }
-
-        if (isCurrentMonth && day.getDate() === today.getDate()) {
-          div.classList.add("today");
-        }
-
-        div.onclick = () => showGames(day);
-        fragment.appendChild(div);
+        htmlContent += `
+          <div class="${classes}" onclick="showGamesByDay(${dateNum})">
+            ${dateNum}
+            ${subtitle}
+          </div>
+        `;
       });
 
-      calendar.appendChild(fragment);
+      calendar.innerHTML = htmlContent;
+    }
+
+    // Helper to process context days safely from click bindings
+    function showGamesByDay(dateNum) {
+      const selectedDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), dateNum);
+      showGames(selectedDay);
     }
 
     // Swipe handling
     let touchStartX = 0;
-
-    document.addEventListener("touchstart", (e) => {
-      touchStartX = e.touches[0].clientX;
-    });
-
-    document.addEventListener("touchend", (e) => {
-      const touchEndX = e.changedTouches[0].clientX;
-      handleSwipe(touchStartX, touchEndX);
-    });
-
-    document.addEventListener("mousedown", (e) => {
-      touchStartX = e.clientX;
-    });
-
-    document.addEventListener("mouseup", (e) => {
-      const touchEndX = e.clientX;
-      handleSwipe(touchStartX, touchEndX);
-    });
+    document.addEventListener("touchstart", (e) => { touchStartX = e.touches[0].clientX; });
+    document.addEventListener("touchend", (e) => { handleSwipe(touchStartX, e.changedTouches[0].clientX); });
+    document.addEventListener("mousedown", (e) => { touchStartX = e.clientX; });
+    document.addEventListener("mouseup", (e) => { handleSwipe(touchStartX, e.clientX); });
 
     function handleSwipe(startX, endX) {
       const diff = startX - endX;
-      if (diff > 50) {
-        currentDate.setMonth(currentDate.getMonth() + 1);
-        buildCalendar();
-      } else if (diff < -50) {
-        currentDate.setMonth(currentDate.getMonth() - 1);
+      if (Math.abs(diff) > 60) {
+        if (diff > 0) {
+          currentDate.setMonth(currentDate.getMonth() + 1);
+        } else {
+          currentDate.setMonth(currentDate.getMonth() - 1);
+        }
         buildCalendar();
       }
     }
 
-    function showGames(day){
+    function showGames(day) {
       const existing = document.getElementById("popup");
-      if(existing) existing.remove();
+      if (existing) existing.remove();
 
       const popup = document.createElement("div");
       popup.id = "popup";
       popup.style.position = "fixed";
       popup.style.inset = "0";
-      popup.style.background = "rgba(0,0,0,0.7)";
+      popup.style.background = "rgba(0,0,0,0.85)";
       popup.style.display = "flex";
       popup.style.justifyContent = "center";
       popup.style.alignItems = "center";
@@ -189,12 +190,14 @@
       box.style.maxWidth = "400px";
       box.style.maxHeight = "70vh";
       box.style.overflowY = "auto";
-      
-      // Stop clicks inside the window box from closing the pop-up
+      box.style.border = "1px solid #2d4561";
+
+      // Prevent popup close click when tapping inner box elements
       box.onclick = (e) => e.stopPropagation();
 
       const title = document.createElement("h2");
-      title.innerText = day.toLocaleDateString();
+      title.style.marginTop = "0";
+      title.innerText = day.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       box.appendChild(title);
 
       const filtered = gameData.filter(g => {
@@ -202,40 +205,33 @@
         return (
           d.getDate() === day.getDate() &&
           d.getMonth() === day.getMonth() &&
-          d.getFullYear() === day.getFullYear()
+          d.getFullYear() === day.getFullYear() &&
+          g.minutes > 0
         );
       });
 
-      if(filtered.length === 0){
+      if (filtered.length === 0) {
         const none = document.createElement("div");
-        none.innerText = "No games found.";
+        none.style.color = "#aaa";
+        none.innerText = "No play history recorded for this day.";
         box.appendChild(none);
       } else {
         filtered.forEach(g => {
           const card = document.createElement("div");
           card.style.display = "flex";
           card.style.alignItems = "center";
-          card.style.gap = "10px";
+          card.style.gap = "12px";
           card.style.marginBottom = "12px";
           card.style.background = "#24384f";
           card.style.padding = "10px";
           card.style.borderRadius = "10px";
 
           card.innerHTML = `
-            <img
-              src="${g.image || ''}"
-              style="
-                width:60px;
-                height:60px;
-                border-radius:10px;
-                object-fit:cover;
-              "
-              alt=""
-            >
+            <img src="${g.image || ''}" style="width:60px; height:60px; border-radius:10px; object-fit:cover; background:#111;">
             <div>
-              <div style="font-weight:bold;">${g.name}</div>
-              <div style="color:#ccc;font-size:14px;">
-                ${Math.floor(g.minutes/60)}h ${g.minutes%60}m played
+              <div style="font-weight:bold; font-size:15px; margin-bottom:2px;">${g.name}</div>
+              <div style="color:#00aced; font-size:13px; font-weight:600;">
+                ${Math.floor(g.minutes / 60)}h ${g.minutes % 60}m logged
               </div>
             </div>
           `;
@@ -248,8 +244,8 @@
       document.body.appendChild(popup);
     }
 
-    // Kickstart program
-    init();
+    // Initialize application data stream
+    initData();
   </script>
 </body>
 </html>
