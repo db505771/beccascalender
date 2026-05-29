@@ -21,7 +21,8 @@
       width: 100%;
       height: 100%;
 
-      overflow: hidden;
+      /* Prevent any native scrolling or bounce effects */
+      overflow: hidden; 
 
       background-color: #0f1a2b;
       color: white;
@@ -31,26 +32,35 @@
       flex-direction: column;
       align-items: center;
       padding: 20px;
-      touch-action: pan-y;
-      overflow-x: hidden;
+      
+      /* Only allow horizontal panning gestures at the CSS level */
+      touch-action: pan-x; 
+      box-sizing: border-box;
     }
 
     h1 {
       margin-bottom: 20px;
       text-align: center;
+      width: 100%;
+      user-select: none;
+    }
+
+    .calendar-container {
+      display: flex;
+      justify-content: center;
+      width: 100%;
     }
 
     .calendar {
       display: grid;
-      grid-template-columns: repeat(5, 1fr); /* Original size column layout */
+      grid-template-columns: repeat(5, 60px); 
       gap: 10px;
-      max-width: 500px;
-      transition: transform 0.3s ease;
+      justify-content: center;
     }
 
     .day {
-      width: 60px; /* Original size */
-      height: 60px; /* Original size */
+      width: 60px; 
+      height: 60px; 
       background-color: #1a2b3d;
       display: flex;
       flex-direction: column;
@@ -59,6 +69,8 @@
       border-radius: 8px;
       font-size: 14px;
       cursor: pointer;
+      box-sizing: border-box;
+      user-select: none;
     }
 
     .day.played {
@@ -70,13 +82,15 @@
     }
 
     .day span {
-      font-size: 20px; /* Original size */
+      font-size: 20px; 
     }
   </style>
 </head>
 <body>
   <h1 id="calendar-title">Loading...</h1>
-  <div class="calendar" id="calendar"></div>
+  <div class="calendar-container">
+    <div class="calendar" id="calendar"></div>
+  </div>
 
   <script>
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTRqMqbCRZdfrIDgdkarWSH7iy3qhwhSCsfjAOcKVYO60m3smkMLMIT8hQWBdmrboORQJGsC3FwmVRq/pub?output=csv";
@@ -86,8 +100,18 @@
     let gameData = [];
     let currentDate = new Date();
     let isLoading = true;
+    let isPopupOpen = false; // Tracks if a date modal is currently displayed
 
-    // Fetch datasets once at startup to remove page delay
+    // Strictly block all vertical page scrolling gestures
+    window.addEventListener('touchmove', function(e) {
+      if (!isPopupOpen) {
+        // If popup is closed, ensure no vertical layout shifting happens
+        if (Math.abs(e.touches[0].clientY) > Math.abs(e.touches[0].clientX)) {
+          e.preventDefault();
+        }
+      }
+    }, { passive: false });
+
     async function initData() {
       try {
         const [csvRes, apiRes] = await Promise.all([
@@ -127,7 +151,8 @@
       const today = new Date();
       const isCurrentMonth = (month === today.getMonth() && year === today.getFullYear());
       const monthName = currentDate.toLocaleString("default", { month: "long" });
-      title.textContent = `${monthName} ${year} Play Calendar`;
+      
+      title.textContent = `${monthName} ${year}`;
 
       const playedDates = new Set();
       for (const row of csvRows) {
@@ -171,10 +196,25 @@
 
     // Swipe handling
     let touchStartX = 0;
-    document.addEventListener("touchstart", (e) => { touchStartX = e.touches[0].clientX; });
-    document.addEventListener("touchend", (e) => { handleSwipe(touchStartX, e.changedTouches[0].clientX); });
-    document.addEventListener("mousedown", (e) => { touchStartX = e.clientX; });
-    document.addEventListener("mouseup", (e) => { handleSwipe(touchStartX, e.clientX); });
+    document.addEventListener("touchstart", (e) => { 
+      if (isPopupOpen) return; // Disable swipe start if popup is open
+      touchStartX = e.touches[0].clientX; 
+    });
+    
+    document.addEventListener("touchend", (e) => { 
+      if (isPopupOpen) return; // Disable swipe end if popup is open
+      handleSwipe(touchStartX, e.changedTouches[0].clientX); 
+    });
+    
+    document.addEventListener("mousedown", (e) => { 
+      if (isPopupOpen) return; 
+      touchStartX = e.clientX; 
+    });
+    
+    document.addEventListener("mouseup", (e) => { 
+      if (isPopupOpen) return; 
+      handleSwipe(touchStartX, e.clientX); 
+    });
 
     function handleSwipe(startX, endX) {
       const diff = startX - endX;
@@ -190,17 +230,27 @@
 
     function showGames(day) {
       const existing = document.getElementById("popup");
-      if (existing) existing.remove();
+      if (existing) {
+        existing.remove();
+        isPopupOpen = false;
+        return;
+      }
+
+      // 🔥 Lock swiping and touch navigation
+      isPopupOpen = true;
 
       const popup = document.createElement("div");
       popup.id = "popup";
       popup.style.position = "fixed";
       popup.style.inset = "0";
-      popup.style.background = "rgba(0,0,0,0.7)"; /* Original setting */
+      popup.style.background = "rgba(0,0,0,0.7)";
       popup.style.display = "flex";
       popup.style.justifyContent = "center";
       popup.style.alignItems = "center";
       popup.style.zIndex = "999";
+      
+      // Allow vertical scroll inside the popup list itself if needed
+      popup.style.touchAction = "pan-y"; 
 
       const box = document.createElement("div");
       box.style.background = "#1a2b3d";
@@ -214,7 +264,7 @@
       box.onclick = (e) => e.stopPropagation();
 
       const title = document.createElement("h2");
-      title.innerText = day.toLocaleDateString(); /* Original style formatting */
+      title.innerText = day.toLocaleDateString();
       box.appendChild(title);
 
       const filtered = gameData.filter(g => {
@@ -229,14 +279,14 @@
 
       if (filtered.length === 0) {
         const none = document.createElement("div");
-        none.innerText = "No games found."; /* Original value */
+        none.innerText = "No games found.";
         box.appendChild(none);
       } else {
         filtered.forEach(g => {
           const card = document.createElement("div");
           card.style.display = "flex";
           card.style.alignItems = "center";
-          card.style.gap = "10px"; /* Original value */
+          card.style.gap = "10px";
           card.style.marginBottom = "12px";
           card.style.background = "#24384f";
           card.style.padding = "10px";
@@ -246,7 +296,7 @@
             <img
               src="${g.image}"
               style="
-                width:60px; /* Original size specifications */
+                width:60px;
                 height:60px;
                 border-radius:10px;
                 object-fit:cover;
@@ -266,7 +316,13 @@
       }
 
       popup.appendChild(box);
-      popup.onclick = () => popup.remove();
+      
+      // 🔥 Restore swiping when clicking background to close out
+      popup.onclick = () => {
+        popup.remove();
+        isPopupOpen = false;
+      };
+      
       document.body.appendChild(popup);
     }
 
