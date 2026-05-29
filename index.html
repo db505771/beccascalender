@@ -40,6 +40,8 @@
       align-items: center;
       border-radius: 8px;
       font-size: 14px;
+      cursor: pointer;
+      user-select: none;
     }
 
     .day.played {
@@ -53,30 +55,39 @@
     .day span {
       font-size: 20px;
     }
+
+    .loading-status {
+      text-align: center;
+      color: #888;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
   <h1 id="calendar-title">Loading...</h1>
   <div class="calendar" id="calendar"></div>
+  <div id="status" class="loading-status">Fetching timeline data...</div>
 
   <script>
-    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTRqMqbCRZdfrIDgdkarWSH7iy3qhwhSCsfjAOcKVYO60m3smkMLMIT8hQWBdmrboORQJGsC3FwmVRq/pub?output=csv";
-   const gameApi =
-  "https://script.google.com/macros/s/AKfycbzcX9WsRdeEdz1ziWq4CbuUwa_WwxxUGPI1YtMTvYIHZGZ4cBus_p7qXdIIiFW_0hu_/exec";
+    const gameApi = "https://script.google.com/macros/s/AKfycbzcX9WsRdeEdz1ziWq4CbuUwa_WwxxUGPI1YtMTvYIHZGZ4cBus_p7qXdIIiFW_0hu_/exec";
 
-let gameData = [];
+    let gameData = [];
     let currentDate = new Date();
 
-    async function fetchData() {
-      const res = await fetch(csvUrl);
-      const text = await res.text();
-      const rows = text.trim().split("\n").slice(1).map(row => row.split(","));
-      return rows;
+    // ⚡ 1. Single API request pipeline
+    async function initDashboard() {
+      try {
+        const res = await fetch(gameApi);
+        gameData = await res.json();
+        
+        document.getElementById("status").style.display = "none";
+        buildCalendar();
+      } catch (err) {
+        console.error(err);
+        document.getElementById("status").innerText = "Failed to synchronize calendar logs.";
+      }
     }
-async function fetchGameData() {
-  const res = await fetch(gameApi);
-  gameData = await res.json();
-}
+
     function getMonthDays(year, month) {
       const date = new Date(year, month, 1);
       const days = [];
@@ -87,7 +98,8 @@ async function fetchGameData() {
       return days;
     }
 
-    async function buildCalendar() {
+    // ⚡ 2. Instant local render cycle
+    function buildCalendar() {
       const calendar = document.getElementById("calendar");
       const title = document.getElementById("calendar-title");
       calendar.innerHTML = "";
@@ -99,38 +111,31 @@ async function fetchGameData() {
       const monthName = currentDate.toLocaleString("default", { month: "long" });
       title.textContent = `${monthName} ${year} Play Calendar`;
 
-      const allRows = await fetchData();
-      await fetchGameData();
       const playedDates = new Set();
 
-      for (const row of allRows) {
-        const rawDate = row[0];
-        const minutesPlayed = parseInt(row[4]) || 0;
-        const date = new Date(rawDate);
-        if (date.getFullYear() === year && date.getMonth() === month && minutesPlayed > 0) {
+      // Scrape data locally out of your optimized Web App payload
+      for (const game of gameData) {
+        const date = new Date(game.date);
+        if (date.getFullYear() === year && date.getMonth() === month && game.minutes > 0) {
           playedDates.add(date.getDate());
         }
       }
 
       const days = getMonthDays(year, month);
+      let htmlBuffer = "";
 
       for (const day of days) {
-        const div = document.createElement("div");
-        div.classList.add("day");
+        const dayNum = day.getDate();
+        let classes = "day";
+        
+        if (playedDates.has(dayNum)) classes += " played";
+        if (isCurrentMonth && dayNum === today.getDate()) classes += " today";
 
-        if (playedDates.has(day.getDate())) {
-          div.classList.add("played");
-          div.innerHTML = `${day.getDate()}<span></span>`;
-        } else {
-          div.innerHTML = `${day.getDate()}<span></span>`;
-        }
-
-        if (isCurrentMonth && day.getDate() === today.getDate()) {
-          div.classList.add("today");
-        }
-div.onclick = () => showGames(day);
-        calendar.appendChild(div);
+        // Build HTML string efficiently
+        htmlBuffer += `<div class="${classes}" onclick="showGames(new Date(${year}, ${month}, ${dayNum}))">${dayNum}<span></span></div>`;
       }
+      
+      calendar.innerHTML = htmlBuffer;
     }
 
     // Swipe handling
@@ -138,7 +143,7 @@ div.onclick = () => showGames(day);
 
     document.addEventListener("touchstart", (e) => {
       touchStartX = e.touches[0].clientX;
-    });
+    }, { passive: true });
 
     document.addEventListener("touchend", (e) => {
       const touchEndX = e.changedTouches[0].clientX;
@@ -156,117 +161,106 @@ div.onclick = () => showGames(day);
 
     function handleSwipe(startX, endX) {
       const diff = startX - endX;
-      if (diff > 50) {
+      if (diff > 60) {
         currentDate.setMonth(currentDate.getMonth() + 1);
         buildCalendar();
-      } else if (diff < -50) {
+      } else if (diff < -60) {
         currentDate.setMonth(currentDate.getMonth() - 1);
         buildCalendar();
       }
     }
-function showGames(day){
 
-  const existing = document.getElementById("popup");
+    function showGames(day) {
+      const existing = document.getElementById("popup");
+      if (existing) {
+        existing.remove();
+        return;
+      }
 
-  if(existing){
-    existing.remove();
-    return;
-  }
+      const popup = document.createElement("div");
+      popup.id = "popup";
+      popup.style.position = "fixed";
+      popup.style.inset = "0";
+      popup.style.background = "rgba(0,0,0,0.8)";
+      popup.style.display = "flex";
+      popup.style.justifyContent = "center";
+      popup.style.alignItems = "center";
+      popup.style.zIndex = "999";
 
-  const popup = document.createElement("div");
+      const box = document.createElement("div");
+      box.style.background = "#1a2b3d";
+      box.style.padding = "20px";
+      box.style.borderRadius = "12px";
+      box.style.width = "90%";
+      box.style.maxWidth = "400px";
+      box.style.maxHeight = "70vh";
+      box.style.overflowY = "auto";
+      
+      // Stop modal from closing accidentally when tapping interior cards
+      box.onclick = (e) => e.stopPropagation();
 
-  popup.id = "popup";
+      const title = document.createElement("h2");
+      title.style.marginTop = "0";
+      title.innerText = day.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      box.appendChild(title);
 
-  popup.style.position = "fixed";
-  popup.style.inset = "0";
-  popup.style.background = "rgba(0,0,0,0.7)";
-  popup.style.display = "flex";
-  popup.style.justifyContent = "center";
-  popup.style.alignItems = "center";
-  popup.style.zIndex = "999";
+      const filtered = gameData.filter(g => {
+        const d = new Date(g.date);
+        return (
+          d.getDate() === day.getDate() &&
+          d.getMonth() === day.getMonth() &&
+          d.getFullYear() === day.getFullYear()
+        );
+      });
 
-  const box = document.createElement("div");
+      if (filtered.length === 0) {
+        const none = document.createElement("div");
+        none.style.color = "#aaa";
+        none.innerText = "No gaming activity logged on this date.";
+        box.appendChild(none);
+      } else {
+        filtered.forEach(g => {
+          const card = document.createElement("div");
+          card.style.display = "flex";
+          card.style.alignItems = "center";
+          card.style.gap = "12px";
+          card.style.marginBottom = "12px";
+          card.style.background = "#24384f";
+          card.style.padding = "10px";
+          card.style.borderRadius = "10px";
 
-  box.style.background = "#1a2b3d";
-  box.style.padding = "20px";
-  box.style.borderRadius = "12px";
-  box.style.width = "90%";
-  box.style.maxWidth = "400px";
-  box.style.maxHeight = "70vh";
-  box.style.overflowY = "auto";
+          card.innerHTML = `
+            <img
+              src="${g.image || ''}"
+              alt=""
+              style="
+                width:60px;
+                height:60px;
+                border-radius:10px;
+                object-fit:cover;
+                background:#111;
+              "
+            >
+            <div>
+              <div style="font-weight:bold; line-height:1.3;">
+                ${g.name}
+              </div>
+              <div style="color:#ccc; font-size:14px; margin-top: 4px;">
+                ${Math.floor(g.minutes / 60)}h ${g.minutes % 60}m played
+              </div>
+            </div>
+          `;
+          box.appendChild(card);
+        });
+      }
 
-  const title = document.createElement("h2");
+      popup.appendChild(box);
+      popup.onclick = () => popup.remove();
+      document.body.appendChild(popup);
+    }
 
-  title.innerText = day.toLocaleDateString();
-
-  box.appendChild(title);
-
-  const filtered = gameData.filter(g => {
-
-    const d = new Date(g.date);
-
-    return (
-      d.getDate() === day.getDate() &&
-      d.getMonth() === day.getMonth() &&
-      d.getFullYear() === day.getFullYear()
-    );
-  });
-
-  if(filtered.length === 0){
-
-    const none = document.createElement("div");
-
-    none.innerText = "No games found.";
-
-    box.appendChild(none);
-
-  } else {
-
-    filtered.forEach(g => {
-
-      const card = document.createElement("div");
-
-      card.style.display = "flex";
-      card.style.alignItems = "center";
-      card.style.gap = "10px";
-      card.style.marginBottom = "12px";
-      card.style.background = "#24384f";
-      card.style.padding = "10px";
-      card.style.borderRadius = "10px";
-
-      card.innerHTML = `
-        <img
-          src="${g.image}"
-          style="
-            width:60px;
-            height:60px;
-            border-radius:10px;
-            object-fit:cover;
-          "
-        >
-
-        <div>
-          <div style="font-weight:bold;">
-            ${g.name}
-          </div>
-
-          <div style="color:#ccc;font-size:14px;">
-            ${Math.floor(g.minutes/60)}h ${g.minutes%60}m played
-          </div>
-        </div>
-      `;
-
-      box.appendChild(card);
-    });
-  }
-
-  popup.appendChild(box);
-
-  popup.onclick = () => popup.remove();
-
-  document.body.appendChild(popup);
-}
-    buildCalendar();
+    // Initialize application execution
+    initDashboard();
   </script>
 </body>
 </html>
