@@ -2,13 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta
+    name="viewport"
+    content="
+      width=device-width,
+      initial-scale=1.0,
+      maximum-scale=1.0,
+      user-scalable=no
+    "
+  />
+
   <title>Playtime Calendar</title>
+
   <style>
+    html,
     body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+
+      overflow: hidden;
+
       background-color: #0f1a2b;
       color: white;
-      font-family: 'Segoe UI', sans-serif;
+
+      font-family: 'Segoe UI', Arial, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -24,14 +42,15 @@
 
     .calendar {
       display: grid;
-      grid-template-columns: repeat(7, 1fr); /* Standard 7-day week layout */
+      grid-template-columns: repeat(5, 1fr); /* Original size column layout */
       gap: 10px;
-      width: 100%;
       max-width: 500px;
+      transition: transform 0.3s ease;
     }
 
     .day {
-      aspect-ratio: 1; /* Keeps calendar items perfectly square */
+      width: 60px; /* Original size */
+      height: 60px; /* Original size */
       background-color: #1a2b3d;
       display: flex;
       flex-direction: column;
@@ -40,7 +59,6 @@
       border-radius: 8px;
       font-size: 14px;
       cursor: pointer;
-      user-select: none;
     }
 
     .day.played {
@@ -52,16 +70,15 @@
     }
 
     .day span {
-      font-size: 20px;
+      font-size: 20px; /* Original size */
     }
   </style>
 </head>
 <body>
-  <h1 id="calendar-title">Loading Layout...</h1>
+  <h1 id="calendar-title">Loading...</h1>
   <div class="calendar" id="calendar"></div>
 
   <script>
-    // Keeping both crucial pipelines completely intact
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTRqMqbCRZdfrIDgdkarWSH7iy3qhwhSCsfjAOcKVYO60m3smkMLMIT8hQWBdmrboORQJGsC3FwmVRq/pub?output=csv";
     const gameApi = "https://script.google.com/macros/s/AKfycbzcX9WsRdeEdz1ziWq4CbuUwa_WwxxUGPI1YtMTvYIHZGZ4cBus_p7qXdIIiFW_0hu_/exec";
 
@@ -70,7 +87,7 @@
     let currentDate = new Date();
     let isLoading = true;
 
-    // ⚡ Fetch both datasets ONCE at startup to completely eliminate swipe lag
+    // Fetch datasets once at startup to remove page delay
     async function initData() {
       try {
         const [csvRes, apiRes] = await Promise.all([
@@ -78,7 +95,6 @@
           fetch(gameApi).then(res => res.json())
         ]);
 
-        // Parse CSV Rows safely
         csvRows = csvRes.trim().split("\n").slice(1).map(row => row.split(","));
         gameData = apiRes;
         
@@ -113,11 +129,9 @@
       const monthName = currentDate.toLocaleString("default", { month: "long" });
       title.textContent = `${monthName} ${year} Play Calendar`;
 
-      // ⚡ Extract played days purely from the Google Sheet CSV cache
       const playedDates = new Set();
       for (const row of csvRows) {
         const rawDate = row[0];
-        // Based on your original row layout: column 4 (index 4) handles minutes played
         const minutesPlayed = parseInt(row[4]) || 0; 
         const date = new Date(rawDate);
         
@@ -129,7 +143,6 @@
       const days = getMonthDays(year, month);
       let htmlString = "";
 
-      // ⚡ DOM Batch Processing for smooth rendering
       days.forEach(day => {
         const dateNum = day.getDate();
         let classes = "day";
@@ -165,7 +178,7 @@
 
     function handleSwipe(startX, endX) {
       const diff = startX - endX;
-      if (Math.abs(diff) > 60) {
+      if (Math.abs(diff) > 50) {
         if (diff > 0) {
           currentDate.setMonth(currentDate.getMonth() + 1);
         } else {
@@ -175,7 +188,6 @@
       }
     }
 
-    // ⚡ Populates individual games via the clean API dataset
     function showGames(day) {
       const existing = document.getElementById("popup");
       if (existing) existing.remove();
@@ -184,7 +196,7 @@
       popup.id = "popup";
       popup.style.position = "fixed";
       popup.style.inset = "0";
-      popup.style.background = "rgba(0,0,0,0.85)";
+      popup.style.background = "rgba(0,0,0,0.7)"; /* Original setting */
       popup.style.display = "flex";
       popup.style.justifyContent = "center";
       popup.style.alignItems = "center";
@@ -198,16 +210,13 @@
       box.style.maxWidth = "400px";
       box.style.maxHeight = "70vh";
       box.style.overflowY = "auto";
-      box.style.border = "1px solid #2d4561";
 
       box.onclick = (e) => e.stopPropagation();
 
       const title = document.createElement("h2");
-      title.style.marginTop = "0";
-      title.innerText = day.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      title.innerText = day.toLocaleDateString(); /* Original style formatting */
       box.appendChild(title);
 
-      // Filters game details from our Web App JSON API data stream
       const filtered = gameData.filter(g => {
         const d = new Date(g.date);
         return (
@@ -220,25 +229,34 @@
 
       if (filtered.length === 0) {
         const none = document.createElement("div");
-        none.style.color = "#aaa";
-        none.innerText = "No game details recorded for this day.";
+        none.innerText = "No games found."; /* Original value */
         box.appendChild(none);
       } else {
         filtered.forEach(g => {
           const card = document.createElement("div");
           card.style.display = "flex";
           card.style.alignItems = "center";
-          card.style.gap = "12px";
+          card.style.gap = "10px"; /* Original value */
           card.style.marginBottom = "12px";
           card.style.background = "#24384f";
           card.style.padding = "10px";
           card.style.borderRadius = "10px";
 
           card.innerHTML = `
-            <img src="${g.image || ''}" style="width:60px; height:60px; border-radius:10px; object-fit:cover; background:#111;">
+            <img
+              src="${g.image}"
+              style="
+                width:60px; /* Original size specifications */
+                height:60px;
+                border-radius:10px;
+                object-fit:cover;
+              "
+            >
             <div>
-              <div style="font-weight:bold; font-size:15px; margin-bottom:2px;">${g.name}</div>
-              <div style="color:#00aced; font-size:13px; font-weight:600;">
+              <div style="font-weight:bold;">
+                ${g.name}
+              </div>
+              <div style="color:#ccc; font-size:14px;">
                 ${Math.floor(g.minutes / 60)}h ${g.minutes % 60}m played
               </div>
             </div>
@@ -252,7 +270,6 @@
       document.body.appendChild(popup);
     }
 
-    // Fire data loading pipeline on window load
     initData();
   </script>
 </body>
