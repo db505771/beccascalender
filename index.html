@@ -1,422 +1,401 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="
-      width=device-width,
-      initial-scale=1.0,
-      maximum-scale=1.0,
-      user-scalable=no
-    "
-  />
-
-  <title>Playtime Calendar</title>
-
-  <style>
-    html,
-    body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden; 
-      background-color: transparent;
-      color: white;
-      font-family: 'Segoe UI', Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-      touch-action: pan-x; 
-      box-sizing: border-box;
-    }
-
-    h1 {
-      margin-bottom: 20px;
-      text-align: center;
-      width: 100%;
-      user-select: none;
-    }
-
-    .calendar-container {
-      display: flex;
-      justify-content: center;
-      width: 100%;
-    }
-
-    .calendar {
-      display: grid;
-      grid-template-columns: repeat(5, 60px); 
-      gap: 10px;
-      justify-content: center;
-    }
-
-    .day {
-      width: 60px; 
-      height: 60px; 
-      background-color: #1a2b3d;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      border-radius: 8px;
-      font-size: 14px;
-      cursor: pointer;
-      box-sizing: border-box;
-      user-select: none;
-    }
-
-    .day.played {
-      background-color: #1e824c;
-    }
-
-    .day.today {
-      border: 2px solid #00aced;
-    }
-
-    .day span {
-      font-size: 20px; 
-    }
-
-    /* LIQUID GLASS STREAK BADGE FOR POPUP CARD */
-    .streakBadge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      margin-top: 4px;
-      background: linear-gradient(135deg, rgba(255, 90, 0, 0.45), rgba(255, 0, 128, 0.35));
-      backdrop-filter: blur(8px) saturate(160%);
-      -webkit-backdrop-filter: blur(8px) saturate(160%);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      border-top: 1px solid rgba(255, 255, 255, 0.55);
-      border-left: 1px solid rgba(255, 255, 255, 0.45);
-      border-radius: 20px;
-      padding: 2px 8px;
-      font-size: 11px;
-      font-weight: 800;
-      color: #ffffff;
-      box-shadow: 
-        inset 0 1px 1px rgba(255, 255, 255, 0.3),
-        0 4px 10px rgba(255, 40, 100, 0.3),
-        0 1px 3px rgba(0, 0, 0, 0.4);
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-    }
-
-    .streakIcon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 12px;
-      height: 12px;
-    }
-
-    .streakIcon svg {
-      width: 100%;
-      height: 100%;
-      fill: #fff;
-      filter: drop-shadow(0 1px 2px rgba(255, 90, 0, 0.6));
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Playtime Calendar</title>
+<style>
+html,
+body {
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:transparent !important;
+  color:white;
+  font-family:'Segoe UI',Arial,sans-serif;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:20px;
+  touch-action:pan-x;
+  box-sizing:border-box;
+}
+h1 {
+  margin-bottom:20px;
+  text-align:center;
+  width:100%;
+  user-select:none;
+  color:white;
+}
+.calendar-container {
+  display:flex;
+  justify-content:center;
+  width:100%;
+  background:transparent;
+}
+.calendar {
+  display:grid;
+  grid-template-columns:repeat(5,60px);
+  gap:10px;
+  justify-content:center;
+  background:transparent;
+}
+.day {
+  width:60px;
+  height:60px;
+  background:rgba(255,255,255,0.07);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,0.12);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  border-radius:8px;
+  font-size:14px;
+  cursor:pointer;
+  box-sizing:border-box;
+  user-select:none;
+  color:white;
+}
+.day.played {
+  background:rgba(30,130,76,0.55);
+  border:1px solid rgba(100,255,170,0.25);
+}
+.day.today {
+  border:2px solid #00aced;
+}
+.day span {
+  font-size:20px;
+}
+/* LIQUID GLASS STREAK BADGE */
+.streakBadge {
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-top:4px;
+  background:linear-gradient(
+    135deg,
+    rgba(255,90,0,0.45),
+    rgba(255,0,128,0.35)
+  );
+  backdrop-filter:blur(8px) saturate(160%);
+  -webkit-backdrop-filter:blur(8px) saturate(160%);
+  border:1px solid rgba(255,255,255,0.25);
+  border-top:1px solid rgba(255,255,255,0.55);
+  border-left:1px solid rgba(255,255,255,0.45);
+  border-radius:20px;
+  padding:2px 8px;
+  font-size:11px;
+  font-weight:800;
+  color:#fff;
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,0.3),
+    0 4px 10px rgba(255,40,100,0.3),
+    0 1px 3px rgba(0,0,0,0.4);
+  text-shadow:0 1px 2px rgba(0,0,0,0.5);
+}
+.streakIcon {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:12px;
+  height:12px;
+}
+.streakIcon svg {
+  width:100%;
+  height:100%;
+  fill:#fff;
+  filter:drop-shadow(0 1px 2px rgba(255,90,0,0.6));
+}
+/* POPUP */
+#popup {
+  background:rgba(0,0,0,0.45) !important;
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+}
+#popup .popupBox {
+  background:rgba(26,43,61,0.78);
+  backdrop-filter:blur(25px) saturate(150%);
+  -webkit-backdrop-filter:blur(25px) saturate(150%);
+  border:1px solid rgba(255,255,255,0.16);
+  box-shadow:0 10px 40px rgba(0,0,0,0.3);
+}
+.popupGameCard {
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.08);
+}
+</style>
 </head>
 <body>
-  <h1 id="calendar-title">Loading...</h1>
-  <div class="calendar-container">
-    <div class="calendar" id="calendar"></div>
-  </div>
-
-  <script>
-    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTRqMqbCRZdfrIDgdkarWSH7iy3qhwhSCsfjAOcKVYO60m3smkMLMIT8hQWBdmrboORQJGsC3FwmVRq/pub?output=csv";
-    const gameApi = "https://script.google.com/macros/s/AKfycbzcX9WsRdeEdz1ziWq4CbuUwa_WwxxUGPI1YtMTvYIHZGZ4cBus_p7qXdIIiFW_0hu_/exec";
-
-    let csvRows = [];
-    let gameData = [];
-    let currentDate = new Date();
-    let isLoading = true;
-    let isPopupOpen = false;
-
-    window.addEventListener('touchmove', function(e) {
-      if (!isPopupOpen) {
-        if (Math.abs(e.touches[0].clientY) > Math.abs(e.touches[0].clientX)) {
-          e.preventDefault();
-        }
-      }
-    }, { passive: false });
-
-    // Helper function to turn any date object or string into a standardized local 'YYYY-MM-DD'
-    function formatDateKey(dateInput) {
-      const d = new Date(dateInput);
-      if (isNaN(d.getTime())) return "";
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+<h1 id="calendar-title">Loading...</h1>
+<div class="calendar-container">
+  <div class="calendar" id="calendar"></div>
+</div>
+<script>
+const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTRqMqbCRZdfrIDgdkarWSH7iy3qhwhSCsfjAOcKVYO60m3smkMLMIT8hQWBdmrboORQJGsC3FwmVRq/pub?output=csv";
+const gameApi = "https://script.google.com/macros/s/AKfycbzcX9WsRdeEdz1ziWq4CbuUwa_WwxxUGPI1YtMTvYIHZGZ4cBus_p7qXdIIiFW_0hu_/exec";
+let csvRows = [];
+let gameData = [];
+let currentDate = new Date();
+let isLoading = true;
+let isPopupOpen = false;
+window.addEventListener('touchmove',function(e){
+  if(!isPopupOpen){
+    if(Math.abs(e.touches[0].clientY) > Math.abs(e.touches[0].clientX)){
+      e.preventDefault();
     }
-
-    async function initData() {
-      try {
-        const [csvRes, apiRes] = await Promise.all([
-          fetch(csvUrl).then(res => res.text()),
-          fetch(gameApi).then(res => res.json())
-        ]);
-
-        csvRows = csvRes.trim().split("\n").slice(1).map(row => row.split(","));
-        gameData = apiRes;
-        
-        isLoading = false;
-        buildCalendar();
-      } catch (e) {
-        document.getElementById("calendar-title").textContent = "Error Loading Data";
-        console.error(e);
-      }
+  }
+},{passive:false});
+// DATE HELPER
+function formatDateKey(dateInput){
+  const d = new Date(dateInput);
+  if(isNaN(d.getTime())) return "";
+  const year = d.getFullYear();
+  const month = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${year}-${month}-${day}`;
+}
+// LOAD DATA
+async function initData(){
+  try{
+    const [csvRes,apiRes] = await Promise.all([
+      fetch(csvUrl).then(res=>res.text()),
+      fetch(gameApi).then(res=>res.json())
+    ]);
+    csvRows = csvRes.trim().split("\n").slice(1).map(row=>row.split(","));
+    gameData = apiRes;
+    isLoading = false;
+    buildCalendar();
+  }catch(e){
+    document.getElementById("calendar-title").textContent="Error Loading Data";
+    console.error(e);
+  }
+}
+// GET MONTH DAYS
+function getMonthDays(year,month){
+  const date = new Date(year,month,1);
+  const days = [];
+  while(date.getMonth()===month){
+    days.push(new Date(date));
+    date.setDate(date.getDate()+1);
+  }
+  return days;
+}
+// BUILD CALENDAR
+function buildCalendar(){
+  if(isLoading) return;
+  const calendar = document.getElementById("calendar");
+  const title = document.getElementById("calendar-title");
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const today = new Date();
+  const isCurrentMonth = (
+    month===today.getMonth() &&
+    year===today.getFullYear()
+  );
+  const monthName = currentDate.toLocaleString("default",{month:"long"});
+  title.textContent = `${monthName} ${year}`;
+  const playedDates = new Set();
+  for(const row of csvRows){
+    const rawDate = row[0];
+    const minutesPlayed = parseInt(row[4]) || 0;
+    const date = new Date(rawDate);
+    if(
+      date.getFullYear()===year &&
+      date.getMonth()===month &&
+      minutesPlayed>0
+    ){
+      playedDates.add(date.getDate());
     }
-
-    function getMonthDays(year, month) {
-      const date = new Date(year, month, 1);
-      const days = [];
-      while (date.getMonth() === month) {
-        days.push(new Date(date));
-        date.setDate(date.getDate() + 1);
-      }
-      return days;
+  }
+  const days = getMonthDays(year,month);
+  let htmlString = "";
+  days.forEach(day=>{
+    const dateNum = day.getDate();
+    let classes = "day";
+    if(playedDates.has(dateNum)){
+      classes+=" played";
     }
-
-    function buildCalendar() {
-      if (isLoading) return;
-
-      const calendar = document.getElementById("calendar");
-      const title = document.getElementById("calendar-title");
-
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      const today = new Date();
-      const isCurrentMonth = (month === today.getMonth() && year === today.getFullYear());
-      const monthName = currentDate.toLocaleString("default", { month: "long" });
-      
-      title.textContent = `${monthName} ${year}`;
-
-      const playedDates = new Set();
-      for (const row of csvRows) {
-        const rawDate = row[0];
-        const minutesPlayed = parseInt(row[4]) || 0; 
-        const date = new Date(rawDate);
-        
-        if (date.getFullYear() === year && date.getMonth() === month && minutesPlayed > 0) {
-          playedDates.add(date.getDate());
-        }
-      }
-
-      const days = getMonthDays(year, month);
-      let htmlString = "";
-
-      days.forEach(day => {
-        const dateNum = day.getDate();
-        let classes = "day";
-
-        if (playedDates.has(dateNum)) {
-          classes += " played";
-        }
-        if (isCurrentMonth && dateNum === today.getDate()) {
-          classes += " today";
-        }
-
-        htmlString += `
-          <div class="${classes}" onclick="showGamesByDay(${dateNum})">
-            ${dateNum}<span></span>
+    if(isCurrentMonth && dateNum===today.getDate()){
+      classes+=" today";
+    }
+    htmlString+=`
+      <div class="${classes}" onclick="showGamesByDay(${dateNum})">
+        ${dateNum}
+        <span></span>
+      </div>
+    `;
+  });
+  calendar.innerHTML = htmlString;
+}
+// SHOW GAMES BY DAY
+function showGamesByDay(dateNum){
+  const selectedDay = new Date(
+    currentDate.getFullYear(),
+    currentDate.getMonth(),
+    dateNum
+  );
+  showGames(selectedDay);
+}
+// SWIPE HANDLING
+let touchStartX = 0;
+document.addEventListener("touchstart",e=>{
+  if(isPopupOpen) return;
+  touchStartX = e.touches[0].clientX;
+});
+document.addEventListener("touchend",e=>{
+  if(isPopupOpen) return;
+  handleSwipe(touchStartX,e.changedTouches[0].clientX);
+});
+document.addEventListener("mousedown",e=>{
+  if(isPopupOpen) return;
+  touchStartX = e.clientX;
+});
+document.addEventListener("mouseup",e=>{
+  if(isPopupOpen) return;
+  handleSwipe(touchStartX,e.clientX);
+});
+function handleSwipe(startX,endX){
+  const diff = startX-endX;
+  if(Math.abs(diff)>50){
+    if(diff>0){
+      currentDate.setMonth(currentDate.getMonth()+1);
+    }else{
+      currentDate.setMonth(currentDate.getMonth()-1);
+    }
+    buildCalendar();
+  }
+}
+// CALCULATE STREAK
+function calculateStreakForDay(gameId,targetDay){
+  const gameDates = new Set();
+  const targetKey = formatDateKey(targetDay);
+  gameData.forEach(g=>{
+    if(g.id===gameId && g.minutes>0){
+      const key = formatDateKey(g.date);
+      if(key) gameDates.add(key);
+    }
+  });
+  if(!gameDates.has(targetKey)){
+    return 0;
+  }
+  let streak = 0;
+  let loopDate = new Date(targetDay.getTime());
+  while(gameDates.has(formatDateKey(loopDate))){
+    streak++;
+    loopDate.setDate(loopDate.getDate()-1);
+  }
+  return streak;
+}
+// SHOW POPUP
+function showGames(day){
+  const existing = document.getElementById("popup");
+  if(existing){
+    existing.remove();
+    isPopupOpen = false;
+    return;
+  }
+  isPopupOpen = true;
+  const popup = document.createElement("div");
+  popup.id = "popup";
+  popup.style.position = "fixed";
+  popup.style.inset = "0";
+  popup.style.display = "flex";
+  popup.style.justifyContent = "center";
+  popup.style.alignItems = "center";
+  popup.style.zIndex = "999";
+  popup.style.touchAction = "pan-y";
+  const box = document.createElement("div");
+  box.className = "popupBox";
+  box.style.padding = "20px";
+  box.style.borderRadius = "16px";
+  box.style.width = "90%";
+  box.style.maxWidth = "400px";
+  box.style.maxHeight = "70vh";
+  box.style.overflowY = "auto";
+  box.style.color = "white";
+  box.onclick = e=>e.stopPropagation();
+  const title = document.createElement("h2");
+  title.innerText = day.toLocaleDateString();
+  box.appendChild(title);
+  const targetDayKey = formatDateKey(day);
+  // MERGE DUPLICATE GAME LOGS
+  const dayGames = gameData.filter(
+    g=>formatDateKey(g.date)===targetDayKey && g.minutes>0
+  );
+  const mergedDayGames = {};
+  dayGames.forEach(g=>{
+    if(!mergedDayGames[g.id]){
+      mergedDayGames[g.id] = {
+        ...g,
+        minutes:0
+      };
+    }
+    mergedDayGames[g.id].minutes += Number(g.minutes) || 0;
+  });
+  const filtered = Object.values(mergedDayGames);
+  if(filtered.length===0){
+    const none = document.createElement("div");
+    none.innerText = "No games found.";
+    box.appendChild(none);
+  }else{
+    filtered.forEach(g=>{
+      const card = document.createElement("div");
+      card.className = "popupGameCard";
+      card.style.display = "flex";
+      card.style.alignItems = "center";
+      card.style.gap = "10px";
+      card.style.marginBottom = "12px";
+      card.style.padding = "10px";
+      card.style.borderRadius = "10px";
+      const dayStreak = calculateStreakForDay(g.id,day);
+      let badgeHtml = "";
+      if(dayStreak>=2){
+        badgeHtml = `
+          <div class="streakBadge">
+            <span class="streakIcon">
+              <svg viewBox="0 0 24 24">
+                <path d="M17.66 11.57c-.77-.77-1.9-1.15-2.85-1.43-.87-.25-1.56-.45-1.95-.73-.55-.4-.76-.94-.76-1.57 0-.46.12-.89.37-1.3l.05-.07c.1-.15.14-.32.14-.49 0-.41-.25-.79-.65-.95-.38-.16-.83-.07-1.13.2l-.1.09C9.52 6.55 8.75 8.39 8.75 10c0 .33.02.66.07.98l.04.22c-.67-.47-1.21-1.12-1.55-1.87-.14-.3-.41-.5-.73-.52-.31-.02-.62.11-.8.37C5.3 10.02 5 11.19 5 12.5c0 3.87 3.13 7 7 7s7-3.13 7-7c0-1.28-.35-2.42-.96-3.41-.18-.3-.51-.47-.86-.44-.35.03-.66.24-.78.56-.37.98-.99 1.74-1.74 2.36z"/>
+              </svg>
+            </span>
+            <span>${dayStreak} day streak</span>
           </div>
         `;
-      });
-
-      calendar.innerHTML = htmlString;
-    }
-
-    function showGamesByDay(dateNum) {
-      const selectedDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), dateNum);
-      showGames(selectedDay);
-    }
-
-    // Swipe handling
-    let touchStartX = 0;
-    document.addEventListener("touchstart", (e) => { 
-      if (isPopupOpen) return; 
-      touchStartX = e.touches[0].clientX; 
+      }
+      card.innerHTML = `
+        <img
+          src="${g.image || ''}"
+          style="
+            width:60px;
+            height:60px;
+            border-radius:10px;
+            object-fit:cover;
+          "
+        >
+        <div>
+          <div style="font-weight:bold;">
+            ${g.name}
+          </div>
+          <div style="color:#ccc;font-size:14px;">
+            ${Math.floor(g.minutes/60)}h ${g.minutes%60}m played
+          </div>
+          ${badgeHtml}
+        </div>
+      `;
+      box.appendChild(card);
     });
-    
-    document.addEventListener("touchend", (e) => { 
-      if (isPopupOpen) return; 
-      handleSwipe(touchStartX, e.changedTouches[0].clientX); 
-    });
-    
-    document.addEventListener("mousedown", (e) => { 
-      if (isPopupOpen) return; 
-      touchStartX = e.clientX; 
-    });
-    
-    document.addEventListener("mouseup", (e) => { 
-      if (isPopupOpen) return; 
-      handleSwipe(touchStartX, e.clientX); 
-    });
-
-    function handleSwipe(startX, endX) {
-      const diff = startX - endX;
-      if (Math.abs(diff) > 50) {
-        if (diff > 0) {
-          currentDate.setMonth(currentDate.getMonth() + 1);
-        } else {
-          currentDate.setMonth(currentDate.getMonth() - 1);
-        }
-        buildCalendar();
-      }
-    }
-
-    // Function to calculate streaks backward for a single game based on a target day
-    function calculateStreakForDay(gameId, targetDay) {
-      const gameDates = new Set();
-      const targetKey = formatDateKey(targetDay);
-      
-      // Collect all keys where this game had playtime
-      gameData.forEach(g => {
-        if (g.id === gameId && g.minutes > 0) {
-          const key = formatDateKey(g.date);
-          if (key) gameDates.add(key);
-        }
-      });
-
-      // If the game wasn't played on this specific day, streak is 0
-      if (!gameDates.has(targetKey)) {
-        return 0;
-      }
-
-      let streak = 0;
-      let loopDate = new Date(targetDay.getTime()); // Clone target day object
-
-      // Walk backward one calendar day at a time
-      while (gameDates.has(formatDateKey(loopDate))) {
-        streak++;
-        loopDate.setDate(loopDate.getDate() - 1);
-      }
-
-      return streak;
-    }
-
-    function showGames(day) {
-      const existing = document.getElementById("popup");
-      if (existing) {
-        existing.remove();
-        isPopupOpen = false;
-        return;
-      }
-
-      isPopupOpen = true;
-
-      const popup = document.createElement("div");
-      popup.id = "popup";
-      popup.style.position = "fixed";
-      popup.style.inset = "0";
-      popup.style.background = "rgba(0,0,0,0.7)";
-      popup.style.display = "flex";
-      popup.style.justifyContent = "center";
-      popup.style.alignItems = "center";
-      popup.style.zIndex = "999";
-      popup.style.touchAction = "pan-y"; 
-
-      const box = document.createElement("div");
-      box.style.background = "#1a2b3d";
-      box.style.padding = "20px";
-      box.style.borderRadius = "12px";
-      box.style.width = "90%";
-      box.style.maxWidth = "400px";
-      box.style.maxHeight = "70vh";
-      box.style.overflowY = "auto";
-
-      box.onclick = (e) => e.stopPropagation();
-
-      const title = document.createElement("h2");
-      title.innerText = day.toLocaleDateString();
-      box.appendChild(title);
-
-      const targetDayKey = formatDateKey(day);
-
-      // Filter and cleanly merge duplicate session logs for the same day
-      const dayGames = gameData.filter(g => formatDateKey(g.date) === targetDayKey && g.minutes > 0);
-      const mergedDayGames = {};
-      
-      dayGames.forEach(g => {
-        if (!mergedDayGames[g.id]) {
-          mergedDayGames[g.id] = { ...g, minutes: 0 };
-        }
-        mergedDayGames[g.id].minutes += g.minutes;
-      });
-
-      const filtered = Object.values(mergedDayGames);
-
-      if (filtered.length === 0) {
-        const none = document.createElement("div");
-        none.innerText = "No games found.";
-        box.appendChild(none);
-      } else {
-        filtered.forEach(g => {
-          const card = document.createElement("div");
-          card.style.display = "flex";
-          card.style.alignItems = "center";
-          card.style.gap = "10px";
-          card.style.marginBottom = "12px";
-          card.style.background = "#24384f";
-          card.style.padding = "10px";
-          card.style.borderRadius = "10px";
-
-          // Calculate consecutive days played leading up to today
-          const dayStreak = calculateStreakForDay(g.id, day);
-          let badgeHtml = "";
-          
-          if (dayStreak >= 2) {
-            badgeHtml = `
-              <div class="streakBadge">
-                <span class="streakIcon">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M17.66 11.57c-.77-.77-1.9-1.15-2.85-1.43-.87-.25-1.56-.45-1.95-.73-.55-.4-.76-.94-.76-1.57 0-.46.12-.89.37-1.3l.05-.07c.1-.15.14-.32.14-.49 0-.41-.25-.79-.65-.95-.38-.16-.83-.07-1.13.2l-.1.09C9.52 6.55 8.75 8.39 8.75 10c0 .33.02.66.07.98l.04.22c-.67-.47-1.21-1.12-1.55-1.87-.14-.3-.41-.5-.73-.52-.31-.02-.62.11-.8.37C5.3 10.02 5 11.19 5 12.5c0 3.87 3.13 7 7 7s7-3.13 7-7c0-1.28-.35-2.42-.96-3.41-.18-.3-.51-.47-.86-.44-.35.03-.66.24-.78.56-.37.98-.99 1.74-1.74 2.36z"/>
-                  </svg>
-                </span>
-                <span>${dayStreak} day streak</span>
-              </div>
-            `;
-          }
-
-          card.innerHTML = `
-            <img
-              src="${g.image || ''}"
-              style="
-                width:60px;
-                height:60px;
-                border-radius:10px;
-                object-fit:cover;
-              "
-            >
-            <div>
-              <div style="font-weight:bold;">
-                ${g.name}
-              </div>
-              <div style="color:#ccc; font-size:14px;">
-                ${Math.floor(g.minutes / 60)}h ${g.minutes % 60}m played
-              </div>
-              ${badgeHtml}
-            </div>
-          `;
-          box.appendChild(card);
-        });
-      }
-
-      popup.appendChild(box);
-      
-      popup.onclick = () => {
-        popup.remove();
-        isPopupOpen = false;
-      };
-      
-      document.body.appendChild(popup);
-    }
-
-    initData();
-  </script>
+  }
+  popup.appendChild(box);
+  popup.onclick = ()=>{
+    popup.remove();
+    isPopupOpen = false;
+  };
+  document.body.appendChild(popup);
+}
+// INITIALIZE
+initData();
+</script>
 </body>
 </html>
